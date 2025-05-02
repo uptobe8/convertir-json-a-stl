@@ -1,15 +1,18 @@
-# Generador de Archivos STL desde JSON
+# Convertir JSON Vectorizado en STL
 
-Este proyecto permite convertir un archivo JSON en un archivo STL que puede ser usado para impresión 3D. 
+Este proyecto permite convertir un archivo JSON que contiene datos de vértices y caras en un archivo STL para impresión 3D.
 
 ## Requisitos
 1. Python 3 instalado.
 2. Instalar las dependencias necesarias (ver pasos abajo).
 
 ## Instalación
-1. Clona el repositorio o descarga estos archivos.
-2. Abre una terminal en la carpeta donde están los archivos.
-3. Instala las dependencias ejecutando:
+1. Clonar este repositorio:
+   ```bash
+   git clone https://github.com/uptobe8/convertir-json-a-stl.git
+   cd convertir-json-a-stl
+   ```
+2. Instalar las dependencias:
    ```bash
    pip install -r requirements.txt
    ```
