@@ -3,12 +3,16 @@ import json
 from stl import mesh
 import numpy as np
 from pathlib import Path
+import os
+from scipy.spatial.transform import Rotation as R
 
 app = Flask(__name__)
 
 def load_json(json_file):
     """Carga y valida el archivo JSON."""
     try:
+        if not os.path.exists(json_file):
+            raise FileNotFoundError(f"El archivo '{json_file}' no existe.")
         with open(json_file, 'r') as f:
             data = json.load(f)
         if "vertices" not in data or "faces" not in data:
@@ -23,7 +27,6 @@ def apply_scaling(vertices, scale_factor):
 
 def apply_rotation(vertices, angle, axis):
     """Rotar los vértices alrededor de un eje."""
-    from scipy.spatial.transform import Rotation as R
     rotation = R.from_euler(axis, angle, degrees=True)
     return rotation.apply(vertices)
 
@@ -37,23 +40,26 @@ def smooth_mesh(vertices, faces, iterations):
 
 def export_to_other_formats(vertices, faces, output_file, format="obj"):
     """Exportar el modelo a otros formatos como OBJ o PLY."""
-    if format == "obj":
-        with open(output_file, 'w') as f:
-            for vertex in vertices:
-                f.write(f"v {vertex[0]} {vertex[1]} {vertex[2]}\n")
-            for face in faces:
-                f.write(f"f {face[0]+1} {face[1]+1} {face[2]+1}\n")
-    elif format == "ply":
-        with open(output_file, 'w') as f:
-            f.write("ply\nformat ascii 1.0\n")
-            f.write(f"element vertex {len(vertices)}\nproperty float x\nproperty float y\nproperty float z\n")
-            f.write(f"element face {len(faces)}\nproperty list uchar int vertex_indices\n")
-            f.write("end_header\n")
-            for vertex in vertices:
-                f.write(f"{vertex[0]} {vertex[1]} {vertex[2]}\n")
-            for face in faces:
-                f.write(f"3 {face[0]} {face[1]} {face[2]}\n")
-    print(f"Modelo exportado como {format.upper()} en {output_file}")
+    try:
+        if format == "obj":
+            with open(output_file, 'w') as f:
+                for vertex in vertices:
+                    f.write(f"v {vertex[0]} {vertex[1]} {vertex[2]}\n")
+                for face in faces:
+                    f.write(f"f {face[0]+1} {face[1]+1} {face[2]+1}\n")
+        elif format == "ply":
+            with open(output_file, 'w') as f:
+                f.write("ply\nformat ascii 1.0\n")
+                f.write(f"element vertex {len(vertices)}\nproperty float x\nproperty float y\nproperty float z\n")
+                f.write(f"element face {len(faces)}\nproperty list uchar int vertex_indices\n")
+                f.write("end_header\n")
+                for vertex in vertices:
+                    f.write(f"{vertex[0]} {vertex[1]} {vertex[2]}\n")
+                for face in faces:
+                    f.write(f"3 {face[0]} {face[1]} {face[2]}\n")
+        print(f"Modelo exportado como {format.upper()} en {output_file}")
+    except Exception as e:
+        raise ValueError(f"Error al exportar modelo: {e}")
 
 @app.route('/convertir-json-a-stl', methods=['POST'])
 def convertir_json_a_stl():
@@ -107,6 +113,11 @@ def convertir_json_a_stl():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route('/healthz', methods=['GET'])
+def health_check():
+    """Endpoint de salud para Render."""
+    return jsonify({"status": "ok"}), 200
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
