@@ -66,7 +66,7 @@ def convertir_json_a_stl():
     try:
         # Leer datos del cuerpo de la solicitud
         if 'file' not in request.files:
-    return jsonify({"error": "No se ha enviado el archivo JSON"}), 400
+            return jsonify({"error": "No se ha enviado el archivo JSON"}), 400
 
 file = request.files['file']
 output_file = request.form.get('output_file')
