@@ -65,13 +65,19 @@ def export_to_other_formats(vertices, faces, output_file, format="obj"):
 def convertir_json_a_stl():
     try:
         # Leer datos del cuerpo de la solicitud
-        data = request.json
-        vector_file = data.get('vector_file')
-        output_file = data.get('output_file')
-        scale_factor = data.get('scale', 1.0)
-        rotation = data.get('rotate')
-        smooth_iterations = data.get('smooth', 0)
-        export_format = data.get('export_format')
+        if 'file' not in request.files:
+    return jsonify({"error": "No se ha enviado el archivo JSON"}), 400
+
+file = request.files['file']
+output_file = request.form.get('output_file')
+scale_factor = float(request.form.get('scale', 1.0))
+rotation = request.form.get('rotate')
+smooth_iterations = int(request.form.get('smooth', 0))
+export_format = request.form.get('export_format')
+
+# Guardar el archivo temporalmente
+temp_json_path = '/tmp/uploaded_vectors.json'
+file.save(temp_json_path)
 
         if not vector_file or not output_file:
             return jsonify({"error": "Se requieren 'vector_file' y 'output_file'"}), 400
