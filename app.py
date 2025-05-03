@@ -30,10 +30,16 @@ def load_and_convert_json(json_file):
             for path in data["vector_paths"]:
                 path_vertices = []
                 for point in path:
-                    vertices.append([point[0], point[1], 0])  # Añadir coordenada Z=0 para plano
+                    vertices.append([point[0], point[1], 0])
                     path_vertices.append(vertex_index)
                     vertex_index += 1
-                # Triangular (simplemente divide en triángulos consecutivos)
+                # ✅ Asegurarse de que el path está cerrado
+                if len(path_vertices) >= 3 and path_vertices[0] != path_vertices[-1]:
+                    # Añadir el primer punto de nuevo para cerrar el polígono
+                    vertices.append(vertices[path_vertices[0]])
+                    path_vertices.append(vertex_index)
+                    vertex_index += 1
+                # ✅ Triangular el polígono (solo si tiene mínimo 3 puntos)
                 if len(path_vertices) >= 3:
                     for i in range(1, len(path_vertices)-1):
                         faces.append([path_vertices[0], path_vertices[i], path_vertices[i+1]])
