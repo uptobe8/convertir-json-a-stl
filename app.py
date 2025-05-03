@@ -5,7 +5,6 @@ import numpy as np
 from pathlib import Path
 import os
 from scipy.spatial.transform import Rotation as R
-import cv2
 
 app = Flask(__name__)
 
