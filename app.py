@@ -17,7 +17,7 @@ def load_json(json_file):
             data = json.load(f)
         if "vertices" not in data or "faces" not in data:
             raise ValueError("El JSON debe contener las claves 'vertices' y 'faces'.")
-            return data
+        return data
     except Exception as e:
         raise ValueError(f"Error al cargar el JSON: {e}")
 
@@ -68,22 +68,22 @@ def convertir_json_a_stl():
         if 'file' not in request.files:
             return jsonify({"error": "No se ha enviado el archivo JSON"}), 400
 
-file = request.files['file']
-output_file = request.form.get('output_file')
-scale_factor = float(request.form.get('scale', 1.0))
-rotation = request.form.get('rotate')
-smooth_iterations = int(request.form.get('smooth', 0))
-export_format = request.form.get('export_format')
+        file = request.files['file']
+        output_file = request.form.get('output_file')
+        scale_factor = float(request.form.get('scale', 1.0))
+        rotation = request.form.get('rotate')
+        smooth_iterations = int(request.form.get('smooth', 0))
+        export_format = request.form.get('export_format')
 
-# Guardar el archivo temporalmente
-temp_json_path = '/tmp/uploaded_vectors.json'
-file.save(temp_json_path)
+        # Guardar el archivo temporalmente
+        temp_json_path = '/tmp/uploaded_vectors.json'
+        file.save(temp_json_path)
 
-        if not vector_file or not output_file:
-            return jsonify({"error": "Se requieren 'vector_file' y 'output_file'"}), 400
+        if not output_file:
+            return jsonify({"error": "Se requiere 'output_file'"}), 400
 
-        # Cargar y procesar el archivo JSON
-        json_data = load_json(vector_file)
+        # Cargar y procesar el archivo JSON desde el archivo subido
+        json_data = load_json(temp_json_path)
         vertices = np.array(json_data["vertices"])
         faces = np.array(json_data["faces"])
 
@@ -93,6 +93,9 @@ file.save(temp_json_path)
 
         # Aplicar rotación
         if rotation:
+            # Parsear el JSON string si rotation llega como texto
+            if isinstance(rotation, str):
+                rotation = json.loads(rotation)
             angle = rotation.get('angle')
             axis = rotation.get('axis')
             if angle is not None and axis is not None:
@@ -115,7 +118,7 @@ file.save(temp_json_path)
         if export_format:
             export_to_other_formats(vertices, faces, Path(output_file).with_suffix(f".{export_format}"), export_format)
 
-            return send_file(output_file, as_attachment=True)
+        return send_file(output_file, as_attachment=True)
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
