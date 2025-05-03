@@ -17,7 +17,7 @@ def load_json(json_file):
             data = json.load(f)
         if "vertices" not in data or "faces" not in data:
             raise ValueError("El JSON debe contener las claves 'vertices' y 'faces'.")
-        return data
+            return data
     except Exception as e:
         raise ValueError(f"Error al cargar el JSON: {e}")
 
@@ -115,7 +115,7 @@ file.save(temp_json_path)
         if export_format:
             export_to_other_formats(vertices, faces, Path(output_file).with_suffix(f".{export_format}"), export_format)
 
-        return send_file(output_file, as_attachment=True)
+            return send_file(output_file, as_attachment=True)
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
