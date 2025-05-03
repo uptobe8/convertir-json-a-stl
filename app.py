@@ -5,21 +5,45 @@ import numpy as np
 from pathlib import Path
 import os
 from scipy.spatial.transform import Rotation as R
+import cv2
 
 app = Flask(__name__)
 
-def load_json(json_file):
-    """Carga y valida el archivo JSON."""
+def load_and_convert_json(json_file):
+    """Carga el archivo JSON y convierte vector_paths en vertices y faces si es necesario."""
     try:
         if not os.path.exists(json_file):
             raise FileNotFoundError(f"El archivo '{json_file}' no existe.")
         with open(json_file, 'r') as f:
             data = json.load(f)
-        if "vertices" not in data or "faces" not in data:
-            raise ValueError("El JSON debe contener las claves 'vertices' y 'faces'.")
-        return data
+        
+        # ✅ Si ya tiene vertices y faces, lo usamos directo
+        if "vertices" in data and "faces" in data:
+            return data
+        
+        # ✅ Si solo tiene vector_paths, convertimos a vertices y faces automáticamente
+        if "vector_paths" in data:
+            print("Convirtiendo vector_paths a vertices/faces...")
+            vertices = []
+            faces = []
+            vertex_index = 0
+
+            for path in data["vector_paths"]:
+                path_vertices = []
+                for point in path:
+                    vertices.append([point[0], point[1], 0])  # Añadir coordenada Z=0 para plano
+                    path_vertices.append(vertex_index)
+                    vertex_index += 1
+                # Triangular (simplemente divide en triángulos consecutivos)
+                if len(path_vertices) >= 3:
+                    for i in range(1, len(path_vertices)-1):
+                        faces.append([path_vertices[0], path_vertices[i], path_vertices[i+1]])
+
+            return {"vertices": vertices, "faces": faces}
+        
+        raise ValueError("El JSON debe contener 'vertices/faces' o 'vector_paths'.")
     except Exception as e:
-        raise ValueError(f"Error al cargar el JSON: {e}")
+        raise ValueError(f"Error al procesar el JSON: {e}")
 
 def apply_scaling(vertices, scale_factor):
     """Escalar los vértices según un factor dado."""
@@ -64,7 +88,6 @@ def export_to_other_formats(vertices, faces, output_file, format="obj"):
 @app.route('/convertir-json-a-stl', methods=['POST'])
 def convertir_json_a_stl():
     try:
-        # Leer datos del cuerpo de la solicitud
         if 'file' not in request.files:
             return jsonify({"error": "No se ha enviado el archivo JSON"}), 400
 
@@ -75,15 +98,14 @@ def convertir_json_a_stl():
         smooth_iterations = int(request.form.get('smooth', 0))
         export_format = request.form.get('export_format')
 
-        # Guardar el archivo temporalmente
         temp_json_path = '/tmp/uploaded_vectors.json'
         file.save(temp_json_path)
 
         if not output_file:
             return jsonify({"error": "Se requiere 'output_file'"}), 400
 
-        # Cargar y procesar el archivo JSON desde el archivo subido
-        json_data = load_json(temp_json_path)
+        # ✅ Cargar y procesar el archivo JSON (acepta tanto vector_paths como vertices/faces)
+        json_data = load_and_convert_json(temp_json_path)
         vertices = np.array(json_data["vertices"])
         faces = np.array(json_data["faces"])
 
@@ -93,7 +115,6 @@ def convertir_json_a_stl():
 
         # Aplicar rotación
         if rotation:
-            # Parsear el JSON string si rotation llega como texto
             if isinstance(rotation, str):
                 rotation = json.loads(rotation)
             angle = rotation.get('angle')
@@ -108,7 +129,7 @@ def convertir_json_a_stl():
         # Crear la malla STL
         stl_mesh = mesh.Mesh(np.zeros(faces.shape[0], dtype=mesh.Mesh.dtype))
         for i, face in enumerate(faces):
-            for j in range(3):  # Cada cara tiene 3 vértices
+            for j in range(3):
                 stl_mesh.vectors[i][j] = vertices[face[j]]
 
         # Guardar el archivo STL
@@ -125,7 +146,6 @@ def convertir_json_a_stl():
 
 @app.route('/healthz', methods=['GET'])
 def health_check():
-    """Endpoint de salud para Render."""
     return jsonify({"status": "ok"}), 200
 
 if __name__ == '__main__':
