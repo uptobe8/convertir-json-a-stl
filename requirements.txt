@@ -1,6 +1,6 @@
-flask
+Flask
 opencv-python
 numpy
 scipy
-stl
+numpy-stl
 gunicorn
