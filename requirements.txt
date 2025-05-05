@@ -1,4 +1,6 @@
-Flask
+flask
+opencv-python
 numpy
-numpy-stl
 scipy
+stl
+gunicorn
