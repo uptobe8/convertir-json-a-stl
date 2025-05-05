@@ -1,70 +1,118 @@
-# Convertir JSON Vectorizado en STL
+# 🛠️ Convertir JSON Vectorizado a STL + Procesamiento de Imagen (2D a 3D)
 
-Este proyecto permite convertir un archivo JSON que contiene datos de vértices y caras en un archivo STL para impresión 3D. Ahora incluye funcionalidades avanzadas para personalizar y mejorar los modelos generados.
+Este proyecto es una aplicación Flask que convierte imágenes 2D en modelos 3D STL completos, permitiendo un flujo completo desde la imagen original hasta la creación del archivo STL, incluyendo preprocesamiento, limpieza, vectorización y generación STL. Todo el proceso se realiza vía API.
 
-## Requisitos
-1. Python 3 instalado.
-2. Instalar las dependencias necesarias (ver pasos abajo).
+---
 
-## Instalación
-1. Clonar este repositorio:
-   ```bash
-   git clone https://github.com/uptobe8/convertir-json-a-stl.git
-   cd convertir-json-a-stl
-   ```
-2. Instalar las dependencias:
-   ```bash
-   pip install -r requirements.txt
-   ```
+## 🚀 Características principales
 
-## Uso
-Ejecuta el script `app.py` con la siguiente estructura:
+- ✅ **Preprocesamiento de imágenes:** Binarización extrema (fondo blanco, trazos negros).
+- ✅ **Limpieza morfológica:** Apertura, cierre y filtrado de contornos pequeños.
+- ✅ **Vectorización:** Conversión de contornos en datos JSON (`vector_paths`).
+- ✅ **Generación de STL:** Extrusión y exportación a archivo STL descargable.
+
+---
+
+## ⚙️ Instalación
+
+1️⃣ Clonar el repositorio:
+
 ```bash
-python app.py <archivo_json> <archivo_salida_stl> [opciones]
-```
+git clone https://github.com/uptobe8/convertir-json-a-stl.git
+cd convertir-json-a-stl
+2️⃣ Crear un entorno virtual (opcional pero recomendado):
 
-Por ejemplo:
-```bash
-python app.py modelo.json modelo.stl --scale 2.0 --rotate 45 z --smooth 3 --export obj
-```
 
-### Formato del JSON
-El archivo JSON debe tener la siguiente estructura:
-```json
-{
-  "vertices": [
-    [0, 0, 0],
-    [1, 0, 0],
-    [0, 1, 0],
-    [0, 0, 1]
-  ],
-  "faces": [
-    [0, 1, 2],
-    [0, 1, 3]
-  ]
-}
-```
+python3 -m venv venv
+source venv/bin/activate
+3️⃣ Instalar dependencias:
 
-- `vertices`: Lista de puntos en 3D (x, y, z).
-- `faces`: Lista de triángulos, donde cada triángulo es definido por índices de los vértices.
+pip install -r requirements.txt
+🚦 Uso
+1️⃣ Levantar el servidor:
 
-## Funcionalidades Avanzadas
-Este script incluye las siguientes opciones avanzadas para personalizar la generación de modelos STL:
 
-1. **Escalado**: Escalar el modelo con la opción `--scale <factor>`.
-   - Ejemplo: `--scale 2.0` duplica el tamaño del modelo.
+python app.py
+🌐 Endpoints API
+1️⃣ POST /procesar-imagen
+Descripción:
+Preprocesa una imagen a blanco y negro binario para posterior limpieza/vectorización.
 
-2. **Rotación**: Rotar el modelo con la opción `--rotate <angle> <axis>`.
-   - Ejemplo: `--rotate 45 z` rota el modelo 45 grados alrededor del eje Z.
+Input (multipart/form-data):
 
-3. **Suavizado**: Suavizar la malla para eliminar bordes duros con `--smooth <iterations>`.
-   - Ejemplo: `--smooth 3` aplica tres iteraciones de suavizado.
+Campo	Tipo	Descripción
+imagen	Binary	Imagen original (por ejemplo, PNG o JPG).
 
-4. **Generación de Soportes**: (Próximamente) Generar soportes básicos para impresión 3D.
+Output:
 
-5. **Exportación a Otros Formatos**: Exportar el modelo a formatos como OBJ o PLY con `--export <format>`.
-   - Ejemplo: `--export obj` genera un archivo `.obj`.
+Código 200: Imagen binaria (image/png).
 
-## Notas
-- El archivo STL será generado en el mismo directorio desde donde ejecutes el script.
-- Para formatos de exportación adicionales, asegúrate de especificar la opción `--export`.
+2️⃣ POST /limpiar
+Descripción:
+Limpia una imagen binaria para optimizar la extracción de contornos.
+
+Input (multipart/form-data):
+
+Campo	Tipo	Descripción
+imagen	Binary	Imagen binaria resultante del preprocesamiento.
+
+Output:
+
+Código 200: Imagen limpia (image/png).
+
+3️⃣ POST /vectorizar-contornos
+Descripción:
+Vectoriza los contornos detectados y devuelve los datos en formato JSON.
+
+Input (application/json):
+
+Campo	Tipo	Descripción
+ruta_imagen_binaria	String	Ruta absoluta/relativa de la imagen binaria limpia a procesar.
+
+Output:
+
+Código 200: JSON con vector_paths.
+
+4️⃣ POST /convertir-json-a-stl
+Descripción:
+Convierte un JSON vectorizado a un archivo STL descargable.
+
+Input (application/json):
+
+Campo	Tipo	Descripción
+vector_file	String	Ruta del archivo JSON vectorizado.
+output_file	String	Nombre del archivo STL a generar.
+options	Object	(Opcional) Escala, rotación, suavizado, export format.
+
+Output:
+
+Código 200: STL generado (application/octet-stream).
+
+🖥️ Ejemplo de uso (cURL)
+1️⃣ Preprocesar imagen:
+
+
+curl -X POST -F "imagen=@/ruta/a/tu/imagen.png" http://localhost:5000/procesar-imagen -o preprocessed.png
+2️⃣ Limpiar imagen:
+
+
+curl -X POST -F "imagen=@preprocessed.png" http://localhost:5000/limpiar -o cleaned.png
+3️⃣ Vectorizar contornos:
+
+
+curl -X POST -H "Content-Type: application/json" -d '{"ruta_imagen_binaria": "/ruta/cleaned.png"}' http://localhost:5000/vectorizar-contornos
+4️⃣ Generar STL:
+
+
+curl -X POST -H "Content-Type: application/json" \
+-d '{"vector_file": "/ruta/vector_paths.json", "output_file": "output.stl", "options": {"scale": 1.0}}' \
+http://localhost:5000/convertir-json-a-stl -o output.stl
+📦 Dependencias
+Flask
+numpy
+numpy-stl
+scipy
+opencv-python
+
+📄 Licencia
+Este proyecto está bajo la licencia MIT. Consulta el archivo LICENSE para más detalles.
