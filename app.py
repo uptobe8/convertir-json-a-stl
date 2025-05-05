@@ -1,6 +1,5 @@
 from flask import Flask, request, jsonify, send_file
 import json
-from stl import mesh
 import numpy as np
 from pathlib import Path
 from scipy.spatial.transform import Rotation as R
@@ -48,6 +47,26 @@ def smooth_mesh(vertices, faces, iterations):
                 vertices[face[i]] = np.mean(vertices[face], axis=0)
     return vertices
 
+def save_stl_ascii(vertices, faces, filename):
+    """Guarda el STL en formato ASCII (sin numpy-stl)."""
+    with open(filename, 'w') as f:
+        f.write('solid ascii\n')
+        for face in faces:
+            v1 = vertices[face[0]]
+            v2 = vertices[face[1]]
+            v3 = vertices[face[2]]
+            # Calcular la normal
+            normal = np.cross(v2 - v1, v3 - v1)
+            normal = normal / np.linalg.norm(normal) if np.linalg.norm(normal) != 0 else np.array([0.0, 0.0, 0.0])
+            f.write(f'  facet normal {normal[0]} {normal[1]} {normal[2]}\n')
+            f.write('    outer loop\n')
+            f.write(f'      vertex {v1[0]} {v1[1]} {v1[2]}\n')
+            f.write(f'      vertex {v2[0]} {v2[1]} {v2[2]}\n')
+            f.write(f'      vertex {v3[0]} {v3[1]} {v3[2]}\n')
+            f.write('    endloop\n')
+            f.write('  endfacet\n')
+        f.write('endsolid\n')
+
 @app.route('/convertir-json-a-stl', methods=['POST'])
 def convertir_json_a_stl():
     try:
@@ -93,14 +112,8 @@ def convertir_json_a_stl():
         if smooth_iterations > 0:
             vertices = smooth_mesh(vertices, faces, smooth_iterations)
 
-        # Crear STL
-        stl_mesh = mesh.Mesh(np.zeros(faces.shape[0], dtype=mesh.Mesh.dtype))
-        for i, face in enumerate(faces):
-            for j in range(3):
-                stl_mesh.vectors[i][j] = vertices[face[j]]
-
-        # Guardar STL
-        stl_mesh.save(output_file)
+        # Guardar STL manualmente en formato ASCII
+        save_stl_ascii(vertices, faces, output_file)
 
         return send_file(output_file, as_attachment=True)
 
